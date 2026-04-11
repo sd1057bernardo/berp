@@ -1,0 +1,37 @@
+{
+  "name": "berp-sistema",
+  "version": "1.0.0",
+  "description": "Sistema de Gestão BERP",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "keywords": [],
+  "author": "Bernardo",
+  "license": "ISC",
+  "config": {
+    "forge": {
+      "packagerConfig": {},
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "berp_sistema"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": ["darwin"]
+        }
+      ]
+    }
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.0.0",
+    "@electron-forge/maker-squirrel": "^6.0.0",
+    "@electron-forge/maker-zip": "^6.0.0",
+    "electron": "^41.2.0"
+  }
+}
