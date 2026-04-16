@@ -1,0 +1,168 @@
+<div class="card-view">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-person-lines-fill"></i> Gestão de Pessoas</h2>
+        <button class="btn btn-primary" onclick="novaPessoa()"><i class="bi bi-plus-circle"></i> Nova Pessoa</button>
+    </div>
+
+    <div class="input-group mb-3">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" id="inputBuscaPessoa" class="form-control" placeholder="Buscar por Nome, CPF ou Endereço..." onkeyup="listarPessoas()">
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>CPF</th>
+                    <th>Cidade/Bairro</th>
+                    <th>Status</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="listaPessoasCorpo">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalPessoa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="formPessoa">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tituloModalPessoa">Dados da Pessoa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="p-id">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">NOME COMPLETO</label>
+                            <input type="text" id="p-nome" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">CPF</label>
+                            <input type="text" id="p-cpf" class="form-control" maxlength="14">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">NASCIMENTO</label>
+                            <input type="date" id="p-niver" class="form-control">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">ENDEREÇO</label>
+                            <input type="text" id="p-end" class="form-control">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold">BAIRRO</label>
+                            <input type="text" id="p-bairro" class="form-control">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold">CIDADE</label>
+                            <input type="text" id="p-cidade" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">ATIVO</label>
+                            <select id="p-ativo" class="form-select">
+                                <option value="1">Sim</option>
+                                <option value="0">Não</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Gravar Dados</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Usamos uma IIFE (função imediata) para não poluir o escopo global a cada navegação
+    (function() {
+        const { ipcRenderer } = require('electron');
+        let modalPessoaObj = null;
+
+        // Função para garantir que o modal seja inicializado corretamente
+        function getModal() {
+            if (!modalPessoaObj) {
+                const el = document.getElementById('modalPessoa');
+                if (el) modalPessoaObj = new bootstrap.Modal(el);
+            }
+            return modalPessoaObj;
+        }
+
+        window.listarPessoas = async function() {
+            const filtro = document.getElementById('inputBuscaPessoa').value;
+            const pessoas = await ipcRenderer.invoke('get-pessoas', filtro);
+            const corpo = document.getElementById('listaPessoasCorpo');
+            if(!corpo) return;
+            
+            corpo.innerHTML = '';
+            pessoas.forEach(p => {
+                const badge = p.Ativo ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-danger">Inativo</span>';
+                const row = document.createElement('tr');
+                if(!p.Ativo) row.classList.add('text-muted', 'opacity-75');
+                
+                row.innerHTML = `
+                    <td>${p.Id}</td>
+                    <td><strong>${p.Nome}</strong></td>
+                    <td>${p.CPF || '-'}</td>
+                    <td>${p.Cidade} / ${p.Bairro}</td>
+                    <td>${badge}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary" onclick='editarPessoa(${JSON.stringify(p)})'>
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>`;
+                corpo.appendChild(row);
+            });
+        };
+
+        window.novaPessoa = function() {
+            document.getElementById('formPessoa').reset();
+            document.getElementById('p-id').value = '';
+            document.getElementById('tituloModalPessoa').innerText = "Cadastrar Nova Pessoa";
+            const m = getModal();
+            if(m) m.show();
+        };
+
+        window.editarPessoa = function(p) {
+            document.getElementById('p-id').value = p.Id;
+            document.getElementById('p-nome').value = p.Nome;
+            document.getElementById('p-cpf').value = p.CPF;
+            document.getElementById('p-niver').value = p.Aniversario;
+            document.getElementById('p-end').value = p.Endereço;
+            document.getElementById('p-bairro').value = p.Bairro;
+            document.getElementById('p-cidade').value = p.Cidade;
+            document.getElementById('p-ativo').value = p.Ativo;
+            document.getElementById('tituloModalPessoa').innerText = "Editando: " + p.Nome;
+            const m = getModal();
+            if(m) m.show();
+        };
+
+        document.getElementById('formPessoa').onsubmit = async (e) => {
+            e.preventDefault();
+            const dados = {
+                Id: document.getElementById('p-id').value,
+                Nome: document.getElementById('p-nome').value.toUpperCase().trim(),
+                CPF: document.getElementById('p-cpf').value.replace(/\D/g, ''),
+                Aniversario: document.getElementById('p-niver').value,
+                Endereço: document.getElementById('p-end').value.toUpperCase().trim(),
+                Bairro: document.getElementById('p-bairro').value.toUpperCase().trim(),
+                Cidade: document.getElementById('p-cidade').value.toUpperCase().trim(),
+                Ativo: parseInt(document.getElementById('p-ativo').value)
+            };
+
+            await ipcRenderer.invoke('save-pessoa', dados);
+            const m = getModal();
+            if(m) m.hide();
+            listarPessoas();
+        };
+
+        listarPessoas();
+    })();
+</script>

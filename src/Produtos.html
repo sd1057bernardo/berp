@@ -1,0 +1,178 @@
+<div class="card-view">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-box-seam"></i> Gestão de Produtos</h2>
+        <button class="btn btn-primary" onclick="novoProduto()"><i class="bi bi-plus-circle"></i> Novo Produto</button>
+    </div>
+
+    <div class="input-group mb-3">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" id="inputBuscaProduto" class="form-control" placeholder="Buscar por descrição ou código..." onkeyup="listarProdutos()">
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Descrição</th>
+                    <th>C. Barra</th>
+                    <th>P. Venda</th>
+                    <th>P. Promo</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="listaProdutosCorpo"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalProduto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="formProduto">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tituloModalProduto">Dados do Produto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="prod-id">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">DESCRIÇÃO</label>
+                            <input type="text" id="prod-desc" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">GRUPO</label>
+                            <input type="text" id="prod-grupo" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">CÓDIGO DE BARRAS</label>
+                            <input type="text" id="prod-barras" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">P. CUSTO</label>
+                            <input type="number" step="0.01" id="prod-custo" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">P. VENDA</label>
+                            <input type="number" step="0.01" id="prod-venda" class="form-control" required>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-danger">P. PROMOÇÃO</label>
+                            <input type="number" step="0.01" id="prod-promo" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">INÍCIO PROMO</label>
+                            <input type="date" id="prod-p-init" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">FIM PROMO</label>
+                            <input type="date" id="prod-p-fim" class="form-control">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">P. ATACADO</label>
+                            <input type="number" step="0.01" id="prod-atacado-p" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">QTD. ATACADO</label>
+                            <input type="number" id="prod-atacado-q" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar Produto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const { ipcRenderer } = require('electron');
+    let modalProdObj = null;
+
+    function getModal() {
+        if (!modalProdObj) {
+            const el = document.getElementById('modalProduto');
+            if (el) modalProdObj = new bootstrap.Modal(el);
+        }
+        return modalProdObj;
+    }
+
+    window.listarProdutos = async function() {
+        try {
+            const filtro = document.getElementById('inputBuscaProduto').value;
+            const produtos = await ipcRenderer.invoke('get-produtos', filtro);
+            const corpo = document.getElementById('listaProdutosCorpo');
+            if (!corpo) return;
+
+            corpo.innerHTML = '';
+            produtos.forEach(p => {
+                corpo.innerHTML += `
+                    <tr>
+                        <td>${p.ID}</td>
+                        <td><strong>${p.Descricao}</strong></td>
+                        <td>${p["C.Barra"] || '-'}</td>
+                        <td>R$ ${Number(p["P.Venda"]).toFixed(2)}</td>
+                        <td class="text-danger">${p["P.Promocao"] > 0 ? 'R$ '+Number(p["P.Promocao"]).toFixed(2) : '-'}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary" onclick='editarProduto(${JSON.stringify(p)})'>
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+        } catch (e) { console.error(e); }
+    };
+
+    window.novoProduto = function() {
+        document.getElementById('formProduto').reset();
+        document.getElementById('prod-id').value = '';
+        document.getElementById('tituloModalProduto').innerText = "Novo Produto";
+        getModal().show();
+    };
+
+    window.editarProduto = function(p) {
+        document.getElementById('prod-id').value = p.ID;
+        document.getElementById('prod-desc').value = p.Descricao;
+        document.getElementById('prod-grupo').value = p.Grupo;
+        document.getElementById('prod-barras').value = p["C.Barra"];
+        document.getElementById('prod-custo').value = p["P.Custo"];
+        document.getElementById('prod-venda').value = p["P.Venda"];
+        document.getElementById('prod-promo').value = p["P.Promocao"];
+        document.getElementById('prod-p-init').value = p["D.P.Init"];
+        document.getElementById('prod-p-fim').value = p["D.P.Fim"];
+        document.getElementById('prod-atacado-p').value = p["P.Atacado"];
+        document.getElementById('prod-atacado-q').value = p["Q.Atacado"];
+        
+        document.getElementById('tituloModalProduto').innerText = "Editando: " + p.Descricao;
+        getModal().show();
+    };
+
+    document.getElementById('formProduto').onsubmit = async (e) => {
+        e.preventDefault();
+        const p = {
+            ID: document.getElementById('prod-id').value,
+            Descricao: document.getElementById('prod-desc').value.toUpperCase(),
+            Grupo: document.getElementById('prod-grupo').value.toUpperCase(),
+            CBarra: document.getElementById('prod-barras').value,
+            PCusto: parseFloat(document.getElementById('prod-custo').value) || 0,
+            PVenda: parseFloat(document.getElementById('prod-venda').value) || 0,
+            PPromocao: parseFloat(document.getElementById('prod-promo').value) || 0,
+            DPInit: document.getElementById('prod-p-init').value,
+            DPFim: document.getElementById('prod-p-fim').value,
+            PAtacado: parseFloat(document.getElementById('prod-atacado-p').value) || 0,
+            QAtacado: parseInt(document.getElementById('prod-atacado-q').value) || 0
+        };
+        await ipcRenderer.invoke('save-produto', p);
+        getModal().hide();
+        listarProdutos();
+    };
+
+    listarProdutos();
+})();
+</script>

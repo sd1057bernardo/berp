@@ -23,15 +23,20 @@
         },
         {
           "name": "@electron-forge/maker-zip",
-          "platforms": ["darwin"]
+          "platforms": [
+            "darwin"
+          ]
         }
       ]
     }
   },
   "devDependencies": {
-    "@electron-forge/cli": "^6.0.0",
-    "@electron-forge/maker-squirrel": "^6.0.0",
-    "@electron-forge/maker-zip": "^6.0.0",
+    "@electron-forge/cli": "^6.4.2",
+    "@electron-forge/maker-squirrel": "^6.4.2",
+    "@electron-forge/maker-zip": "^6.4.2",
     "electron": "^41.2.0"
+  },
+  "dependencies": {
+    "sqlite3": "^6.0.1"
   }
 }

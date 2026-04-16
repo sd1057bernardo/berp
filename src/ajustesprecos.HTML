@@ -1,0 +1,139 @@
+<div class="card-view">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-currency-dollar text-success"></i> Ajuste de Margens e Preços</h2>
+        <span class="badge bg-info text-dark">Cálculo baseado em Preço de Venda</span>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-12">
+            <div class="input-group input-group-lg shadow-sm">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" id="inputBuscaPreco" class="form-control border-start-0" 
+                       placeholder="Digite o nome do produto ou código de barras para ajustar..." onkeyup="listarPrecos()">
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle shadow-sm bg-white">
+            <thead class="table-dark">
+                <tr>
+                    <th>Descrição</th>
+                    <th style="width: 180px;">P. Custo (R$)</th>
+                    <th style="width: 180px;">P. Venda (R$)</th>
+                    <th class="text-center">Margem Lucro</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="listaAjusteCorpo">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+(function() {
+    const { ipcRenderer } = require('electron');
+
+    window.listarPrecos = async function() {
+        try {
+            const filtro = document.getElementById('inputBuscaPreco').value;
+            const produtos = await ipcRenderer.invoke('get-produtos', filtro);
+            const corpo = document.getElementById('listaAjusteCorpo');
+            if (!corpo) return;
+
+            corpo.innerHTML = '';
+            produtos.forEach(p => {
+                const pVenda = parseFloat(p["P.Venda"]) || 0;
+                const pCusto = parseFloat(p["P.Custo"]) || 0;
+                
+                // Cálculo da Margem: ((Venda - Custo) / Venda) * 100
+                let margem = 0;
+                if (pVenda > 0) {
+                    margem = ((pVenda - pCusto) / pVenda) * 100;
+                }
+
+                const corMargem = margem < 20 ? 'text-danger' : 'text-success';
+
+                corpo.innerHTML += `
+                    <tr>
+                        <td>
+                            <div class="fw-bold">${p.Descricao}</div>
+                            <small class="text-muted">C. Barra: ${p["C.Barra"] || '---'}</small>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" class="form-control form-control-sm" 
+                                   id="custo-${p.ID}" value="${pCusto.toFixed(2)}" oninput="recalcularLinha(${p.ID})">
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" class="form-control form-control-sm fw-bold" 
+                                   id="venda-${p.ID}" value="${pVenda.toFixed(2)}" oninput="recalcularLinha(${p.ID})">
+                        </td>
+                        <td class="text-center">
+                            <span id="margem-${p.ID}" class="fw-bold ${corMargem}">
+                                ${margem.toFixed(2)}%
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-success" onclick="salvarPreco(${p.ID})">
+                                <i class="bi bi-check-lg"></i> Salvar
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+        } catch (e) { console.error(e); }
+    };
+
+    // Recalcula a margem em tempo real enquanto o usuário digita
+    window.recalcularLinha = function(id) {
+        const custo = parseFloat(document.getElementById(`custo-${id}`).value) || 0;
+        const venda = parseFloat(document.getElementById(`venda-${id}`).value) || 0;
+        const spanMargem = document.getElementById(`margem-${id}`);
+
+        let margem = 0;
+        if (venda > 0) {
+            margem = ((venda - custo) / venda) * 100;
+        }
+
+        spanMargem.innerText = margem.toFixed(2) + '%';
+        
+        // Altera a cor se for menor que 20%
+        if (margem < 20) {
+            spanMargem.className = 'fw-bold text-danger';
+        } else {
+            spanMargem.className = 'fw-bold text-success';
+        }
+    };
+
+    window.salvarPreco = async function(id) {
+        const pCusto = parseFloat(document.getElementById(`custo-${id}`).value) || 0;
+        const pVenda = parseFloat(document.getElementById(`venda-${id}`).value) || 0;
+
+        try {
+            await ipcRenderer.invoke('update-preco-rapido', {
+                ID: id,
+                PCusto: pCusto,
+                PVenda: pVenda
+            });
+            
+            // Feedback visual de sucesso
+            const btn = event.currentTarget;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-hand-thumbs-up"></i>';
+            btn.classList.replace('btn-success', 'btn-primary');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.replace('btn-primary', 'btn-success');
+            }, 1500);
+
+        } catch (e) {
+            alert("Erro ao salvar preço");
+            console.error(e);
+        }
+    };
+
+    // Inicializa a lista
+    listarPrecos();
+})();
+</script>
