@@ -1,28 +1,36 @@
 <div class="card-view">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-person-lines-fill"></i> Gestão de Pessoas</h2>
-        <button class="btn btn-primary" onclick="novaPessoa()"><i class="bi bi-plus-circle"></i> Nova Pessoa</button>
+        <button class="btn btn-primary" onclick="novaPessoa()"><i class="bi bi-plus-circle"></i> Cadastrar Nova</button>
     </div>
 
-    <div class="input-group mb-3">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input type="text" id="inputBuscaPessoa" class="form-control" placeholder="Buscar por Nome, CPF ou Endereço..." onkeyup="listarPessoas()">
+    <div class="row g-3 mb-3 align-items-center">
+        <div class="col-md-8">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="inputBuscaPessoa" class="form-control" placeholder="Buscar por Nome, CPF ou Endereço..." onkeyup="listarPessoas()">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-check form-switch border p-2 rounded bg-white shadow-sm d-flex align-items-center justify-content-center">
+                <input class="form-check-input me-2" type="checkbox" id="checkMostrarInativos" onchange="listarPessoas()">
+                <label class="form-check-label fw-bold text-secondary" for="checkMostrarInativos">Exibir Inativos</label>
+            </div>
+        </div>
     </div>
 
     <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
                     <th>ID</th>
                     <th>Nome</th>
-                    <th>CPF</th>
-                    <th>Cidade/Bairro</th>
-                    <th>Status</th>
+                    <th>Telefone</th>
+                    <th>Cargo/Status</th>
                     <th class="text-end">Ações</th>
                 </tr>
             </thead>
-            <tbody id="listaPessoasCorpo">
-                </tbody>
+            <tbody id="listaPessoasCorpo"></tbody>
         </table>
     </div>
 </div>
@@ -39,41 +47,59 @@
                     <input type="hidden" id="p-id">
                     <div class="row g-3">
                         <div class="col-md-8">
-                            <label class="form-label small fw-bold">NOME COMPLETO</label>
-                            <input type="text" id="p-nome" class="form-control" required>
+                            <label class="form-label small fw-bold text-primary">NOME COMPLETO</label>
+                            <input type="text" id="p-nome" class="form-control form-control-lg" required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold">CPF</label>
-                            <input type="text" id="p-cpf" class="form-control" maxlength="14">
+                            <label class="form-label small fw-bold text-primary">CPF</label>
+                            <input type="text" id="p-cpf" class="form-control" maxlength="14" placeholder="000.000.000-00" oninput="mascaraCPF(this)">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-primary">TELEFONE</label>
+                            <input type="text" id="p-telefone" class="form-control" placeholder="(00) 00000-0000">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold">NASCIMENTO</label>
+                            <label class="form-label small fw-bold text-primary">ANIVERSÁRIO</label>
                             <input type="date" id="p-niver" class="form-control">
                         </div>
-                        <div class="col-md-8">
-                            <label class="form-label small fw-bold">ENDEREÇO</label>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-danger">OPERADOR SISTEMA?</label>
+                            <select id="p-operador" class="form-select border-danger">
+                                <option value="0">NÃO</option>
+                                <option value="1">SIM (Pode acessar o caixa)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-12 border-top pt-3 mt-4">
+                            <h6 class="text-muted mb-3 small">LOCALIZAÇÃO</h6>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">ENDEREÇO (Rua, Número, Comp.)</label>
                             <input type="text" id="p-end" class="form-control">
+                        </div>
+
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold">CIDADE</label>
+                            <input type="text" id="p-cidade" class="form-control">
                         </div>
                         <div class="col-md-5">
                             <label class="form-label small fw-bold">BAIRRO</label>
                             <input type="text" id="p-bairro" class="form-control">
                         </div>
-                        <div class="col-md-5">
-                            <label class="form-label small fw-bold">CIDADE</label>
-                            <input type="text" id="p-cidade" class="form-control">
-                        </div>
                         <div class="col-md-2">
-                            <label class="form-label small fw-bold">ATIVO</label>
+                            <label class="form-label small fw-bold text-primary">ATIVO</label>
                             <select id="p-ativo" class="form-select">
-                                <option value="1">Sim</option>
-                                <option value="0">Não</option>
+                                <option value="1">SIM</option>
+                                <option value="0">NÃO</option>
                             </select>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">Gravar Dados</button>
+                    <button type="submit" class="btn btn-success">Salvar Cadastro</button>
                 </div>
             </form>
         </div>
@@ -81,38 +107,39 @@
 </div>
 
 <script>
-    // Usamos uma IIFE (função imediata) para não poluir o escopo global a cada navegação
-    (function() {
-        const { ipcRenderer } = require('electron');
-        let modalPessoaObj = null;
+(function() {
+    const { ipcRenderer } = require('electron');
+    let modalPessoaObj = null;
 
-        // Função para garantir que o modal seja inicializado corretamente
-        function getModal() {
-            if (!modalPessoaObj) {
-                const el = document.getElementById('modalPessoa');
-                if (el) modalPessoaObj = new bootstrap.Modal(el);
-            }
-            return modalPessoaObj;
+    function getModal() {
+        if (!modalPessoaObj) {
+            const el = document.getElementById('modalPessoa');
+            if (el) modalPessoaObj = new bootstrap.Modal(el);
         }
+        return modalPessoaObj;
+    }
 
-        window.listarPessoas = async function() {
+    window.listarPessoas = async function() {
+        try {
             const filtro = document.getElementById('inputBuscaPessoa').value;
-            const pessoas = await ipcRenderer.invoke('get-pessoas', filtro);
+            const inativos = document.getElementById('checkMostrarInativos').checked;
+            const pessoas = await ipcRenderer.invoke('get-pessoas', filtro, inativos);
             const corpo = document.getElementById('listaPessoasCorpo');
             if(!corpo) return;
             
             corpo.innerHTML = '';
             pessoas.forEach(p => {
-                const badge = p.Ativo ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-danger">Inativo</span>';
-                const row = document.createElement('tr');
-                if(!p.Ativo) row.classList.add('text-muted', 'opacity-75');
+                const statusBadge = p.Ativo ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-danger">Inativo</span>';
+                const operBadge = p.Operador ? '<span class="badge bg-info text-dark ms-1">Operador</span>' : '';
                 
+                const row = document.createElement('tr');
+                if(!p.Ativo) row.className = 'text-muted opacity-75';
+
                 row.innerHTML = `
                     <td>${p.Id}</td>
                     <td><strong>${p.Nome}</strong></td>
-                    <td>${p.CPF || '-'}</td>
-                    <td>${p.Cidade} / ${p.Bairro}</td>
-                    <td>${badge}</td>
+                    <td>${p.Telefone || '-'}</td>
+                    <td>${statusBadge}${operBadge}</td>
                     <td class="text-end">
                         <button class="btn btn-sm btn-outline-primary" onclick='editarPessoa(${JSON.stringify(p)})'>
                             <i class="bi bi-pencil"></i>
@@ -120,49 +147,97 @@
                     </td>`;
                 corpo.appendChild(row);
             });
+        } catch(e) { console.error(e); }
+    };
+
+    window.novaPessoa = function() {
+        document.getElementById('formPessoa').reset();
+        document.getElementById('p-id').value = '';
+        document.getElementById('tituloModalPessoa').innerText = "Cadastrar Nova Pessoa";
+        getModal().show();
+    };
+
+    window.editarPessoa = function(p) {
+        document.getElementById('p-id').value = p.Id;
+        document.getElementById('p-nome').value = p.Nome;
+        document.getElementById('p-cpf').value = p.CPF || '';
+        document.getElementById('p-telefone').value = p.Telefone || '';
+        document.getElementById('p-niver').value = p.Aniversario || '';
+        document.getElementById('p-end').value = p.Endereço || '';
+        document.getElementById('p-cidade').value = p.Cidade || '';
+        document.getElementById('p-bairro').value = p.Bairro || '';
+        document.getElementById('p-ativo').value = p.Ativo;
+        document.getElementById('p-operador').value = p.Operador || 0;
+        
+        document.getElementById('tituloModalPessoa').innerText = "Editando: " + p.Nome;
+        getModal().show();
+    };
+
+    document.getElementById('formPessoa').onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const cpfVal = document.getElementById('p-cpf').value;
+        const niverVal = document.getElementById('p-niver').value;
+
+        if (cpfVal !== "" && !validarCPF(cpfVal)) {
+            alert("CPF inválido!");
+            return;
+        }
+
+        if (!validarData(niverVal)) {
+            alert("Data de aniversário inválida!");
+            return;
+        }
+
+        const dados = {
+            Id: document.getElementById('p-id').value,
+            Nome: document.getElementById('p-nome').value.toUpperCase().trim(),
+            CPF: cpfVal.replace(/\D/g, ''),
+            Telefone: document.getElementById('p-telefone').value.trim(),
+            Aniversario: niverVal,
+            Endereço: document.getElementById('p-end').value.toUpperCase().trim(),
+            Cidade: document.getElementById('p-cidade').value.toUpperCase().trim(),
+            Bairro: document.getElementById('p-bairro').value.toUpperCase().trim(),
+            Ativo: parseInt(document.getElementById('p-ativo').value),
+            Operador: parseInt(document.getElementById('p-operador').value)
         };
 
-        window.novaPessoa = function() {
-            document.getElementById('formPessoa').reset();
-            document.getElementById('p-id').value = '';
-            document.getElementById('tituloModalPessoa').innerText = "Cadastrar Nova Pessoa";
-            const m = getModal();
-            if(m) m.show();
-        };
-
-        window.editarPessoa = function(p) {
-            document.getElementById('p-id').value = p.Id;
-            document.getElementById('p-nome').value = p.Nome;
-            document.getElementById('p-cpf').value = p.CPF;
-            document.getElementById('p-niver').value = p.Aniversario;
-            document.getElementById('p-end').value = p.Endereço;
-            document.getElementById('p-bairro').value = p.Bairro;
-            document.getElementById('p-cidade').value = p.Cidade;
-            document.getElementById('p-ativo').value = p.Ativo;
-            document.getElementById('tituloModalPessoa').innerText = "Editando: " + p.Nome;
-            const m = getModal();
-            if(m) m.show();
-        };
-
-        document.getElementById('formPessoa').onsubmit = async (e) => {
-            e.preventDefault();
-            const dados = {
-                Id: document.getElementById('p-id').value,
-                Nome: document.getElementById('p-nome').value.toUpperCase().trim(),
-                CPF: document.getElementById('p-cpf').value.replace(/\D/g, ''),
-                Aniversario: document.getElementById('p-niver').value,
-                Endereço: document.getElementById('p-end').value.toUpperCase().trim(),
-                Bairro: document.getElementById('p-bairro').value.toUpperCase().trim(),
-                Cidade: document.getElementById('p-cidade').value.toUpperCase().trim(),
-                Ativo: parseInt(document.getElementById('p-ativo').value)
-            };
-
-            await ipcRenderer.invoke('save-pessoa', dados);
-            const m = getModal();
-            if(m) m.hide();
-            listarPessoas();
-        };
-
+        await ipcRenderer.invoke('save-pessoa', dados);
+        getModal().hide();
         listarPessoas();
-    })();
+    };
+
+    // FUNÇÕES AUXILIARES
+    window.mascaraCPF = function(i) {
+        let v = i.value.replace(/\D/g, "");
+        if (v.length > 11) v = v.substring(0, 11);
+        v = v.replace(/(\d{3})(\d)/, "$1.$2");
+        v = v.replace(/(\d{3})(\d)/, "$1.$2");
+        v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+        i.value = v;
+    };
+
+    function validarCPF(cpf) {
+        cpf = cpf.replace(/[^\d]+/g, '');
+        if (cpf.length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+        let add = 0;
+        for (let i = 0; i < 9; i++) add += parseInt(cpf.charAt(i)) * (10 - i);
+        let rev = 11 - (add % 11);
+        if (rev == 10 || rev == 11) rev = 0;
+        if (rev != parseInt(cpf.charAt(9))) return false;
+        add = 0;
+        for (let i = 0; i < 10; i++) add += parseInt(cpf.charAt(i)) * (11 - i);
+        rev = 11 - (add % 11);
+        if (rev == 10 || rev == 11) rev = 0;
+        return rev == parseInt(cpf.charAt(10));
+    }
+
+    function validarData(data) {
+        if (!data) return true;
+        const d = new Date(data);
+        return d <= new Date() && d.getFullYear() > 1900;
+    }
+
+    listarPessoas();
+})();
 </script>

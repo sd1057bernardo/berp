@@ -1,0 +1,91 @@
+<div class="card-view">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-cart-check"></i> Histórico Detalhado</h2>
+        <div class="d-flex gap-2">
+            <input type="date" id="filtroData" class="form-control" onchange="listarVendas()">
+            <button class="btn btn-outline-secondary" onclick="imprimirRelatorioDia()">
+                <i class="bi bi-printer"></i> Relatório do Dia
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Data/Hora</th>
+                    <th>Cliente</th>
+                    <th>Formas de Pagamento</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="listaVendasCorpo"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+(function() {
+    const { ipcRenderer } = require('electron');
+
+    document.getElementById('filtroData').valueAsDate = new Date();
+
+    window.listarVendas = async function() {
+        try {
+            const dataFiltro = document.getElementById('filtroData').value;
+            const vendas = await ipcRenderer.invoke('get-vendas', dataFiltro);
+            const corpo = document.getElementById('listaVendasCorpo');
+            if(!corpo) return;
+            
+            corpo.innerHTML = '';
+            vendas.forEach(v => {
+                const isCancelada = v.Status === 'CANCELADA';
+                const totalFormatado = v.Total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                const row = document.createElement('tr');
+                row.className = isCancelada ? 'table-danger opacity-75' : '';
+                row.innerHTML = `
+                    <td>${v.ID}</td>
+                    <td>${new Date(v.DataHora).toLocaleString('pt-BR')}</td>
+                    <td><strong>${v.NomeCliente || 'Consumidor'}</strong></td>
+                    <td><small class="text-muted">${v.DetalhePagamento || '-'}</small></td>
+                    <td class="fw-bold ${isCancelada ? 'text-decoration-line-through text-muted' : 'text-success'}">
+                        ${totalFormatado}
+                    </td>
+                    <td><span class="badge ${isCancelada ? 'bg-danger' : 'bg-success'}">${v.Status || 'OK'}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary" onclick="reimprimirCupom(${v.ID})">
+                            <i class="bi bi-printer"></i>
+                        </button>
+                        ${!isCancelada ? `
+                            <button class="btn btn-sm btn-outline-danger" onclick="cancelarVenda(${v.ID})">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        ` : ''}
+                    </td>`;
+                corpo.appendChild(row);
+            });
+        } catch(e) { console.error("Erro ao listar:", e); }
+    };
+
+    window.imprimirRelatorioDia = function() {
+        ipcRenderer.send('gerar-relatorio-vendas', document.getElementById('filtroData').value);
+    };
+
+    window.reimprimirCupom = function(id) {
+        ipcRenderer.send('imprimir-venda', id);
+    };
+
+    window.cancelarVenda = async function(id) {
+        if (confirm(`Deseja cancelar a venda #${id}?`)) {
+            const res = await ipcRenderer.invoke('cancelar-venda', id);
+            if (res.success) listarVendas();
+        }
+    };
+
+    listarVendas();
+})();
+</script>
