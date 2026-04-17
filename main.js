@@ -9,24 +9,31 @@ const db = new sqlite3.Database(dbPath);
 // --- HANDLERS DE PRODUTOS ---
 ipcMain.handle('get-produtos', async (event, filtro = '') => {
     return new Promise((resolve, reject) => {
+        // Busca produtos por nome ou código de barras
         const sql = `SELECT * FROM Produtos WHERE Descricao LIKE ? OR "C.Barra" LIKE ? ORDER BY Descricao ASC`;
         const param = `%${filtro}%`;
         db.all(sql, [param, param], (err, rows) => {
-            if (err) reject(err); else resolve(rows);
+            if (err) {
+                console.error("Erro ao buscar produtos:", err);
+                reject(err);
+            } else {
+                resolve(rows);
+            }
         });
     });
 });
 
+// Adicione também o save-produto se for usar o cadastro
 ipcMain.handle('save-produto', async (event, p) => {
     return new Promise((resolve, reject) => {
         if (p.ID) {
-            const sql = `UPDATE Produtos SET Descricao=?, "P.Custo"=?, "P.Venda"=?, "C.Barra"=?, Grupo=?, "P.Atacado"=?, "Q.Atacado"=? WHERE ID=?`;
-            db.run(sql, [p.Descricao, p.P_Custo, p.P_Venda, p.C_Barra, p.Grupo, p.P_Atacado, p.Q_Atacado, p.ID], err => {
+            const sql = `UPDATE Produtos SET Descricao=?, "P.Custo"=?, "P.Venda"=?, "C.Barra"=? WHERE ID=?`;
+            db.run(sql, [p.Descricao, p.P_Custo, p.P_Venda, p.C_Barra, p.ID], err => {
                 if (err) reject(err); else resolve({ success: true });
             });
         } else {
-            const sql = `INSERT INTO Produtos (Descricao, "P.Custo", "P.Venda", "C.Barra", Grupo, "P.Atacado", "Q.Atacado") VALUES (?, ?, ?, ?, ?, ?, ?)`;
-            db.run(sql, [p.Descricao, p.P_Custo, p.P_Venda, p.C_Barra, p.Grupo, p.P_Atacado, p.Q_Atacado], function(err) {
+            const sql = `INSERT INTO Produtos (Descricao, "P.Custo", "P.Venda", "C.Barra") VALUES (?, ?, ?, ?)`;
+            db.run(sql, [p.Descricao, p.P_Custo, p.P_Venda, p.C_Barra], function(err) {
                 if (err) reject(err); else resolve({ success: true, id: this.lastID });
             });
         }
@@ -198,6 +205,43 @@ ipcMain.on('gerar-relatorio-vendas', (event, data) => {
             <div class="flex bold" style="font-size: 14px;"><span>TOTAL LÍQUIDO:</span> <span>R$ ${totalGeral.toFixed(2)}</span></div>
             <div class="text-center" style="margin-top: 20px;">--- FIM ---</div>`;
         abrirJanelaImpressao(html);
+    });
+});
+
+
+ipcMain.handle('get-estatisticas-dashboard', async () => {
+    return new Promise((resolve, reject) => {
+        const hoje = new Date().toISOString().split('T')[0];
+        const stats = {
+            vendasHoje: 0,
+            qtdVendas: 0,
+            totalItens: 0,
+            totalAbaixoMinimo: 0,
+            itensCriticos: [],
+            graficoLabels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'], // Exemplo estático
+            graficoValores: [120, 190, 300, 500, 200, 300, 450] // Exemplo estático
+        };
+
+        // Exemplo de queries simultâneas (Simplificado)
+        db.serialize(() => {
+            // Vendas de hoje
+            db.get(`SELECT SUM(Total) as total, COUNT(ID) as qtd FROM Vendas WHERE DataHora LIKE ? AND Status != 'CANCELADA'`, [`${hoje}%`], (err, row) => {
+                if (row) {
+                    stats.vendasHoje = row.total || 0;
+                    stats.qtdVendas = row.qtd || 0;
+                }
+            });
+
+            // Estoque
+            db.get(`SELECT SUM(EstoqueAtual) as total, COUNT(ID) as abaixo FROM Produtos WHERE EstoqueAtual <= 5`, (err, row) => {
+                stats.totalAbaixoMinimo = row?.abaixo || 0;
+            });
+
+            db.all(`SELECT Descricao, EstoqueAtual FROM Produtos WHERE EstoqueAtual <= 5 LIMIT 5`, (err, rows) => {
+                stats.itensCriticos = rows || [];
+                resolve(stats); // Resolve após a última consulta
+            });
+        });
     });
 });
 
