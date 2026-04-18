@@ -75,7 +75,7 @@
                             </span>
                         </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-success" onclick="salvarPreco(${p.ID})">
+                            <button class="btn btn-sm btn-success" onclick="salvarPreco(${p.ID}, this)">
                                 <i class="bi bi-check-lg"></i> Salvar
                             </button>
                         </td>
@@ -105,7 +105,7 @@
         }
     };
 
-    window.salvarPreco = async function(id) {
+    window.salvarPreco = async function(id, btnEl) {
         const pCusto = parseFloat(document.getElementById(`custo-${id}`).value) || 0;
         const pVenda = parseFloat(document.getElementById(`venda-${id}`).value) || 0;
 
@@ -117,14 +117,18 @@
             });
             
             // Feedback visual de sucesso
-            const btn = event.currentTarget;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<i class="bi bi-hand-thumbs-up"></i>';
-            btn.classList.replace('btn-success', 'btn-primary');
+            const btn = btnEl || document.querySelector(`#listaAjusteCorpo button[onclick*="salvarPreco(${id})"]`);
+            const originalHTML = btn?.innerHTML;
+            if (btn) {
+                btn.innerHTML = '<i class="bi bi-hand-thumbs-up"></i>';
+                btn.classList.replace('btn-success', 'btn-primary');
+            }
             
             setTimeout(() => {
-                btn.innerHTML = originalHTML;
-                btn.classList.replace('btn-primary', 'btn-success');
+                if (btn) {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.replace('btn-primary', 'btn-success');
+                }
             }, 1500);
 
         } catch (e) {
