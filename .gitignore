@@ -2,3 +2,4 @@ node_modules/
 berp.db
 *.log
 out/
+berp.sqbpro
