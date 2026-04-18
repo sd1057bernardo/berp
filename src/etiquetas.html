@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <title>Editor de Etiquetas</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        :root{
+            --ok:#2d8f2d; --warn:#d97706; --err:#c53030; --muted:#666;
+            --card:#fff; --bg:#f3f4f6; --border:#e5e7eb;
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+        body{margin:16px;background:var(--bg);color:#111}
+        .container{max-width:980px;margin:0 auto}
+        h1{font-size:1.25rem;margin:0 0 12px}
+        .grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
+        .card{background:var(--card);border:1px solid var(--border);padding:12px;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,0.03)}
+        label{display:block;font-size:0.9rem;margin:8px 0 4px;color:var(--muted)}
+        input[type="text"], input[type="number"], input[type="date"]{width:100%;padding:8px;border:1px solid var(--border);border-radius:6px}
+        .row{display:flex;gap:8px;align-items:center}
+        .toggle{display:inline-flex;align-items:center;gap:8px;margin-top:8px}
+        .badge{padding:4px 8px;border-radius:999px;font-weight:600;font-size:0.8rem;color:#fff}
+        .badge.ok{background:var(--ok)}
+        .badge.err{background:var(--err)}
+        .muted{color:var(--muted);font-size:0.9rem}
+        .preview{padding:12px;border-radius:6px;border:1px dashed var(--border);background:#fff;min-height:140px;display:flex;flex-direction:column;justify-content:space-between}
+        .label-top{display:flex;justify-content:space-between;align-items:flex-start}
+        .label-title{font-weight:700}
+        .label-price{font-size:1.3rem;font-weight:800;color:#111}
+        .small{font-size:0.85rem;color:var(--muted)}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    /* Botões estilizados para destaque */
+    .btn{padding:10px 14px;border-radius:8px;border:none;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+    .btn-primary{background:#0d6efd;color:#fff;box-shadow:0 6px 16px rgba(13,110,253,0.14);border:1px solid rgba(13,110,253,0.16)}
+    .btn-primary:hover{filter:brightness(.97)}
+    .btn-danger{background:#dc3545;color:#fff;box-shadow:0 6px 16px rgba(220,53,69,0.12);border:1px solid rgba(220,53,69,0.12)}
+    .btn-secondary{background:#6c757d;color:#fff;box-shadow:0 4px 10px rgba(108,117,125,0.08);border:1px solid rgba(0,0,0,0.06)}
+    .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+        .barcode{letter-spacing:4px;font-family:monospace;font-size:1.05rem;padding:6px 8px;background:#111;color:#fff;border-radius:4px;display:inline-block}
+        .status-list{display:grid;gap:6px;margin-top:8px}
+        .status-item{display:flex;justify-content:space-between;align-items:center;padding:6px;border-radius:6px;background:#fbfbfb;border:1px solid var(--border);font-size:0.95rem}
+        .note{font-size:0.85rem;color:var(--muted);margin-top:8px}
+        @media (max-width:900px){.grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Editor de Etiquetas</h1>
+        <div class="grid">
+            <form id="form" class="card" onsubmit="return false">
+                <label>Nome do produto</label>
+                <input id="name" type="text" placeholder="Ex: Arroz Tipo 1 5kg" />
+
+                <label>Preço (valor do produto)</label>
+                <input id="price" type="number" min="0" step="0.01" placeholder="0.00" />
+
+                <label>Código de barras (EAN-8 ou EAN-13)</label>
+                <input id="barcode" type="text" inputmode="numeric" placeholder="Ex: 7891234567895" />
+
+                <div class="toggle">
+                    <input id="promoEnabled" type="checkbox" />
+                    <label for="promoEnabled">Ativar preço promocional</label>
+                </div>
+                <div id="promoFields" style="display:none">
+                    <label>Preço promocional</label>
+                    <input id="promoPrice" type="number" min="0" step="0.01" placeholder="0.00" />
+                    <label>Data final da promoção</label>
+                    <input id="promoEnd" type="date" />
+                </div>
+
+                <div class="toggle">
+                    <input id="wholesaleEnabled" type="checkbox" />
+                    <label for="wholesaleEnabled">Ativar preço de atacado</label>
+                </div>
+                <div id="wholesaleFields" style="display:none">
+                    <label>Preço de atacado</label>
+                    <input id="wholesalePrice" type="number" min="0" step="0.01" placeholder="0.00" />
+                    <label>Quantidade mínima para atacado</label>
+                    <input id="wholesaleMinQty" type="number" min="1" step="1" placeholder="Ex: 10" />
+                </div>
+
+                <div class="actions">
+                    <button id="reset" class="btn btn-secondary">Limpar</button>
+                    <button id="print" class="btn btn-primary">Imprimir (preview)</button>
+                </div>
+                <p class="note">Validações: código EAN-8/13; preço promocional menor que o preço normal e com data futura; preço de atacado menor que preço normal e quantidade mínima &gt;= 2.</p>
+            </form>
+
+            <div class="card">
+                <div class="status-list" id="statusList">
+                    <!-- status items injected -->
+                </div>
+
+                <div style="margin-top:12px" class="preview" id="labelPreview">
+                    <div>
+                        <div class="label-top">
+                            <div>
+                                <div class="label-title" id="pvName">Nome do produto</div>
+                                <div class="small" id="pvBarcode"><span class="barcode">0000000000000</span></div>
+                            </div>
+                            <div style="text-align:right">
+                                <div class="small">Preço</div>
+                                <div class="label-price" id="pvPrice">R$ 0,00</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:12px" id="pvPromoArea" class="small" hidden>
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <div>
+                                    <div style="text-decoration:line-through;color:var(--muted)" id="pvOldPrice">R$ 0,00</div>
+                                    <div style="font-weight:700;color:var(--ok)" id="pvPromoPrice">Promo R$ 0,00</div>
+                                </div>
+                                <div class="small" id="pvPromoEnd">Até 00/00/0000</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:8px" id="pvWholesaleArea" class="small" hidden>
+                            <div>Atacado: <strong id="pvWholesalePrice">R$ 0,00</strong> a partir de <strong id="pvWholesaleQty">0</strong> unidades</div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+                        <div class="small">Etiqueta gerada</div>
+                        <div class="small muted" id="pvGenerated">---</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        // evita re-execução que causa "Identifier ... already been declared" quando a página é re-injetada
+        if (window.__etiquetasInitialized) return;
+        window.__etiquetasInitialized = true;
+
+        const { ipcRenderer } = require('electron');
+
+        // Helper utils
+        const fmt = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
+        const el = id => document.getElementById(id);
+
+        // EAN (8 or 13) validation
+        function validateEAN(code){
+            if(!code) return false;
+            code = (''+code).replace(/\D/g,'');
+            if(!(code.length===8 || code.length===13)) return false;
+            const digits = code.split('').map(Number);
+            const check = digits.pop();
+            const reverse = digits.slice().reverse();
+            let sum = 0;
+            for(let i=0;i<reverse.length;i++){
+                sum += reverse[i] * ((i % 2 === 0) ? 3 : 1);
+            }
+            const calc = (10 - (sum % 10)) % 10;
+            return calc === check;
+        }
+
+        // DOM refs
+        const nameInput = el('name'), priceInput = el('price'), barcodeInput = el('barcode');
+        const promoEnabled = el('promoEnabled'), promoFields = el('promoFields');
+        const promoPrice = el('promoPrice'), promoEnd = el('promoEnd');
+        const wholesaleEnabled = el('wholesaleEnabled'), wholesaleFields = el('wholesaleFields');
+        const wholesalePrice = el('wholesalePrice'), wholesaleMinQty = el('wholesaleMinQty');
+        const statusList = el('statusList');
+        const pvName = el('pvName'), pvPrice = el('pvPrice'), pvBarcode = el('pvBarcode');
+        const pvPromoArea = el('pvPromoArea'), pvOldPrice = el('pvOldPrice'), pvPromoPrice = el('pvPromoPrice'), pvPromoEnd = el('pvPromoEnd');
+        const pvWholesaleArea = el('pvWholesaleArea'), pvWholesalePrice = el('pvWholesalePrice'), pvWholesaleQty = el('pvWholesaleQty');
+        const pvGenerated = el('pvGenerated');
+
+        // Show/hide toggles
+        promoEnabled.addEventListener('change', ()=>{ promoFields.style.display = promoEnabled.checked ? 'block' : 'none'; updateAll(); });
+        wholesaleEnabled.addEventListener('change', ()=>{ wholesaleFields.style.display = wholesaleEnabled.checked ? 'block' : 'none'; updateAll(); });
+
+        // events: keep original live update behavior
+        ['input','change'].forEach(evt=>{
+            [nameInput, priceInput, barcodeInput, promoPrice, promoEnd, wholesalePrice, wholesaleMinQty].forEach(i=>i.addEventListener(evt, updateAll));
+        });
+
+        el('reset').addEventListener('click', e=>{
+            e.preventDefault();
+            document.getElementById('form').reset();
+            promoFields.style.display = 'none';
+            wholesaleFields.style.display = 'none';
+            clearSuggestions();
+            statusList.innerHTML = '';
+            updateAll();
+        });
+
+        el('print').addEventListener('click', e=>{
+            e.preventDefault();
+            // Simple print of preview area (kept local for speed)
+            const printWin = window.open('', '_blank', 'width=600,height=400');
+            printWin.document.write('<title>Etiqueta</title>');
+            printWin.document.write('<style>body{font-family:Arial,Helvetica,sans-serif;padding:20px} .barcode{letter-spacing:4px;font-family:monospace;background:#111;color:#fff;padding:6px;border-radius:4px}</style>');
+            printWin.document.write('<div>'+el('labelPreview').innerHTML+'</div>');
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(()=>printWin.print(),300);
+        });
+
+        function makeStatus(text, ok, note){
+            const div = document.createElement('div');
+            div.className = 'status-item';
+            const left = document.createElement('div'); left.textContent = text;
+            const right = document.createElement('div');
+            const badge = document.createElement('span');
+            badge.className = 'badge ' + (ok ? 'ok' : 'err');
+            badge.textContent = ok ? 'Válido' : 'Inválido';
+            right.appendChild(badge);
+            if(note){
+                const n = document.createElement('div'); n.className='small'; n.style.marginTop='4px'; n.textContent = note;
+                div.appendChild(n);
+            }
+            div.appendChild(left); div.appendChild(right);
+            return div;
+        }
+
+        function updateAll(){
+            // values
+            const name = nameInput.value.trim();
+            const price = parseFloat(priceInput.value) || 0;
+            const barcode = (barcodeInput.value||'').replace(/\s/g,'');
+            const promoOn = promoEnabled.checked;
+            const promoP = parseFloat(promoPrice.value) || 0;
+            const promoDate = promoEnd.value ? new Date(promoEnd.value) : null;
+            const wholesaleOn = wholesaleEnabled.checked;
+            const wholesaleP = parseFloat(wholesalePrice.value) || 0;
+            const wholesaleQty = parseInt(wholesaleMinQty.value) || 0;
+
+            // statuses (keep suggestions above)
+            // Remove only status items (not the suggestions container)
+            removeStatusItems();
+
+            const priceOk = price > 0;
+            statusList.appendChild(makeStatus('Valor do produto', priceOk, priceOk ? '' : 'Insira um preço maior que 0'));
+
+            const barcodeOk = validateEAN(barcode);
+            statusList.appendChild(makeStatus('Código de barras (EAN)', barcodeOk, barcode ? (barcodeOk ? '' : 'EAN-8 ou EAN-13 inválido') : 'Não configurado'));
+
+            if(promoOn){
+                const promoPriceOk = promoP > 0 && promoP < price;
+                const now = new Date(); now.setHours(0,0,0,0);
+                const promoDateOk = promoDate && promoDate >= now;
+                const promoOk = promoPriceOk && promoDateOk && priceOk;
+                let note = '';
+                if(!promoPriceOk) note = 'Preço promocional deve ser >0 e menor que o preço normal';
+                else if(!promoDateOk) note = 'Data final deve ser hoje ou futura';
+                statusList.appendChild(makeStatus('Preço promocional ativo', promoOk, note));
+            } else {
+                statusList.appendChild(makeStatus('Preço promocional', false, 'Desativado'));
+            }
+
+            if(wholesaleOn){
+                const wholesalePriceOk = wholesaleP > 0 && wholesaleP < price;
+                const wholesaleQtyOk = wholesaleQty >= 2;
+                const wholesaleOk = wholesalePriceOk && wholesaleQtyOk && priceOk;
+                let note = '';
+                if(!wholesalePriceOk) note = 'Preço de atacado deve ser >0 e menor que o preço normal';
+                else if(!wholesaleQtyOk) note = 'Quantidade mínima para atacado deve ser >= 2';
+                statusList.appendChild(makeStatus('Preço de atacado ativo', wholesaleOk, note));
+            } else {
+                statusList.appendChild(makeStatus('Preço de atacado', false, 'Desativado'));
+            }
+
+            // preview
+            pvName.textContent = name || 'Nome do produto';
+            pvPrice.textContent = fmt(price);
+            pvBarcode.innerHTML = '<span class="barcode">'+(barcode||'0000000000000')+'</span>';
+            pvGenerated.textContent = new Date().toLocaleString();
+
+            if(promoOn && promoP>0){
+                pvPromoArea.hidden = false;
+                pvOldPrice.textContent = fmt(price);
+                pvPromoPrice.textContent = 'Promo ' + fmt(promoP);
+                pvPromoEnd.textContent = promoDate ? ('Até ' + promoDate.toLocaleDateString()) : 'Sem data';
+            } else {
+                pvPromoArea.hidden = true;
+            }
+
+            if(wholesaleOn && wholesaleP>0){
+                pvWholesaleArea.hidden = false;
+                pvWholesalePrice.textContent = fmt(wholesaleP);
+                pvWholesaleQty.textContent = wholesaleQty || 0;
+            } else {
+                pvWholesaleArea.hidden = true;
+            }
+        }
+
+        // helpers para gerenciar sugestões separadas dos status
+        function clearSuggestions(){
+            const existing = document.getElementById('suggestionsList');
+            if(existing) existing.remove();
+        }
+        function removeStatusItems(){
+            // remove todos os filhos exceto o container de sugestões (se existir)
+            const sug = document.getElementById('suggestionsList');
+            statusList.innerHTML = '';
+            if(sug) statusList.prepend(sug);
+        }
+
+        // ----- Integração com o banco via ipc -----
+        function fillProduct(p){
+            if(!p) return;
+            nameInput.value = p.Descricao || '';
+            priceInput.value = (p['P.Venda'] != null) ? Number(p['P.Venda']) : '';
+            barcodeInput.value = p['C.Barra'] || p['C.Barras'] || p.CBarra || '';
+
+            const promoVal = Number(p['P.Promocao'] || p['P.PROMOCAO'] || p['P.Promocao'] || 0);
+            if(promoVal > 0){
+                promoEnabled.checked = true; promoFields.style.display = 'block';
+                promoPrice.value = promoVal;
+                promoEnd.value = p['D.P.Fim'] || p['D.P.FIM'] || p['D.P.Fim'] || '';
+            } else {
+                promoEnabled.checked = false; promoFields.style.display = 'none';
+                promoPrice.value = '';
+                promoEnd.value = '';
+            }
+
+            const aVal = Number(p['P.Atacado'] || p['P.ATACADO'] || 0);
+            if(aVal > 0){
+                wholesaleEnabled.checked = true; wholesaleFields.style.display = 'block';
+                wholesalePrice.value = aVal;
+                wholesaleMinQty.value = p['Q.Atacado'] || p['Q.ATACADO'] || p.QAtacado || '';
+            } else {
+                wholesaleEnabled.checked = false; wholesaleFields.style.display = 'none';
+                wholesalePrice.value = '';
+                wholesaleMinQty.value = '';
+            }
+
+            updateAll();
+            clearSuggestions();
+            statusList.prepend(makeStatus('Carregado do banco: #' + (p.ID || p.Id || '—'), true, 'Dados populados automaticamente'));
+        }
+
+        async function searchProducts(filtro){
+            try{
+                const res = await ipcRenderer.invoke('get-produtos', filtro || '');
+                return res || [];
+            }catch(err){
+                console.error(err);
+                return [];
+            }
+        }
+
+        // mostra uma lista clicável de resultados
+        function showSuggestions(results){
+            clearSuggestions();
+            const container = document.createElement('div');
+            container.id = 'suggestionsList';
+            container.style.display = 'grid';
+            container.style.gap = '4px';
+
+            results.slice(0,10).forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'status-item';
+                item.style.cursor = 'pointer';
+                item.innerHTML = `<div><strong>${r.Descricao}</strong><div class="small">${r['C.Barra'] || r.CBarra || '-'} • R$ ${Number(r['P.Venda']||0).toFixed(2)}</div></div>`;
+                item.addEventListener('click', ()=> fillProduct(r));
+                container.appendChild(item);
+            });
+
+            // inserir no topo da lista de status
+            statusList.prepend(container);
+        }
+
+        // debounce util
+        function debounce(fn, wait){
+            let t;
+            return function(...args){
+                clearTimeout(t);
+                t = setTimeout(()=> fn.apply(this, args), wait);
+            };
+        }
+
+        const doLiveSearch = debounce(async (q) => {
+            if(!q || q.length < 2){ clearSuggestions(); return; }
+            const res = await searchProducts(q);
+            if(res.length > 0) showSuggestions(res);
+            else clearSuggestions();
+        }, 250);
+
+        // Uso: ao digitar no nome, faz busca live; no barcode também
+        nameInput.addEventListener('input', (e) => doLiveSearch(e.target.value.trim()));
+        barcodeInput.addEventListener('input', (e) => doLiveSearch(e.target.value.replace(/\s/g,'')));
+
+        // Enter/blur behaviors mantém comportamento anterior (preenche primeiro resultado)
+        barcodeInput.addEventListener('blur', async ()=>{
+            const val = (barcodeInput.value||'').replace(/\s/g,'');
+            if(val){
+                const res = await searchProducts(val);
+                if(res && res.length > 0) fillProduct(res[0]);
+            }
+        });
+        barcodeInput.addEventListener('keyup', async (e)=>{ if(e.key === 'Enter') { const v=(barcodeInput.value||'').replace(/\s/g,''); if(v){ const res = await searchProducts(v); if(res && res.length>0) fillProduct(res[0]); } } });
+        nameInput.addEventListener('keyup', async (e)=>{ if(e.key === 'Enter') { const v=nameInput.value.trim(); if(v){ const res = await searchProducts(v); if(res && res.length>0) fillProduct(res[0]); } } });
+
+        // initial
+        updateAll();
+    })();
+    </script>
