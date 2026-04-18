@@ -46,12 +46,24 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     (async () => {
         const { ipcRenderer } = require('electron');
 
-        // 1. Buscar dados do Backend (você precisa criar esse handler no main.js)
+        // Carrega Chart.js dinamicamente e com timeout
+        function loadChartCDN() {
+            return new Promise((resolve) => {
+                if (window.Chart) return resolve(true);
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+                s.onload = () => resolve(true);
+                s.onerror = () => resolve(false);
+                document.head.appendChild(s);
+                setTimeout(() => resolve(!!window.Chart), 3000);
+            });
+        }
+
+        // 1. Buscar dados do Backend
         try {
             const stats = await ipcRenderer.invoke('get-estatisticas-dashboard');
             
@@ -63,32 +75,41 @@
 
             // 3. Montar Lista de Estoque Crítico
             const lista = document.getElementById('lista-estoque-critico');
-            lista.innerHTML = stats.itensCriticos.map(item => `
+            lista.innerHTML = (stats.itensCriticos || []).map(item => `
                 <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                     <span>${item.Descricao}</span>
-                    <span class="badge bg-danger rounded-pill">${item.EstoqueAtual} un</span>
+                    <span class="badge bg-danger rounded-pill">${(item.EstoqueAtual || 0)} un</span>
                 </div>
             `).join('') || '<p class="text-success small">Estoque em dia!</p>';
 
-            // 4. Gerar Gráfico
-            const ctx = document.getElementById('graficoVendas').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: stats.graficoLabels, // Ex: ['Seg', 'Ter'...]
-                    datasets: [{
-                        label: 'Vendas R$',
-                        data: stats.graficoValores,
-                        backgroundColor: '#0d6efd',
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { display: false } } }
+            // 4. Gerar Gráfico se Chart disponível
+            const chartLoaded = await loadChartCDN();
+            if (chartLoaded && window.Chart) {
+                try {
+                    const ctx = document.getElementById('graficoVendas').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: stats.graficoLabels || [],
+                            datasets: [{
+                                label: 'Vendas R$',
+                                data: stats.graficoValores || [],
+                                backgroundColor: '#0d6efd',
+                                borderRadius: 5
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, grid: { display: false } } }
+                        }
+                    });
+                } catch(e) {
+                    console.error('Erro ao desenhar gráfico:', e);
                 }
-            });
+            } else {
+                console.warn('Chart.js não carregado — gráfico será omitido.');
+            }
         } catch (err) {
             console.error("Falha ao carregar dashboard:", err);
         }
