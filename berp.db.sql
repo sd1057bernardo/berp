@@ -28,15 +28,17 @@ CREATE TABLE IF NOT EXISTS "Pessoas" (
 CREATE TABLE IF NOT EXISTS "Produtos" (
 	"ID"	INTEGER,
 	"Descricao"	TEXT,
-	"P.Venda"	NUMERIC,
-	"P.Custo"	NUMERIC,
-	"P.Atacado"	NUMERIC,
-	"P.Promocao"	NUMERIC,
-	"Q.Atacado"	NUMERIC,
-	"D.P.Init"	TEXT,
-	"D.P.Fim"	TEXT,
-	"C.Barra"	NUMERIC,
-	"Grupo"	TEXT, Estoque REAL DEFAULT 0,
+	"P.Venda"	NUMERIC, -- preco de Venda
+	"P.Custo"	NUMERIC, -- preco de Custo
+	"P.Atacado"	NUMERIC, -- preco de Atacado
+	"P.Promocao"	NUMERIC, -- preco de Promocao
+	"Q.Atacado"	NUMERIC, -- quantidade minima para Atacado
+	"D.P.Init"	TEXT, -- data de inicio da promocao
+	"D.P.Fim"	TEXT, -- data de fim da promocao
+	"C.Barra"	NUMERIC, -- codigo de barras
+	"Grupo"	TEXT, -- grupo do produto
+    "Estoque"	REAL DEFAULT 0,
+    "EstoqueAtual"	REAL DEFAULT 0,
 	PRIMARY KEY("ID" AUTOINCREMENT)
 );
 CREATE TABLE IF NOT EXISTS Venda_Itens (
@@ -53,7 +55,7 @@ CREATE TABLE IF NOT EXISTS Venda_Pagamentos (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
     VendaID INTEGER,
     FormaPagamento TEXT, 
-    ValorPago DECIMAL(10,2), -- Aqui estava o erro (tinha um espaço)
+    ValorPago DECIMAL(10,2), 
     ValorRecebido DECIMAL(10,2),
     Troco DECIMAL(10,2),
     FOREIGN KEY (VendaID) REFERENCES Vendas(ID)
@@ -83,4 +85,18 @@ INSERT INTO "Venda_Pagamentos" ("ID","VendaID","FormaPagamento","ValorPago","Val
 INSERT INTO "Venda_Pagamentos" ("ID","VendaID","FormaPagamento","ValorPago","ValorRecebido","Troco") VALUES (2,1,'DINHEIRO',20,50,30);
 INSERT INTO "Venda_Pagamentos" ("ID","VendaID","FormaPagamento","ValorPago","ValorRecebido","Troco") VALUES (3,1,'DEBITO',23.8,23.8,0);
 INSERT INTO "Vendas" ("ID","DataHora","OperadorID","ClienteID","Total","Status") VALUES (1,'2026-04-16 17:54:41',1,NULL,63.8,'CONCLUIDA');
+
+-- Tabela para registrar movimentos de estoque (entradas/saídas)
+CREATE TABLE IF NOT EXISTS Estoque_Movimentos (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ProdutoID INTEGER,
+    Tipo TEXT, -- 'ENTRADA' ou 'SAIDA'
+    Quantidade REAL,
+    Preco REAL,
+    Descricao TEXT,
+    DataHora DATETIME DEFAULT CURRENT_TIMESTAMP,
+    Cancelado INTEGER DEFAULT 0,
+    CancelObs TEXT,
+    CancelData DATETIME
+);
 COMMIT;
