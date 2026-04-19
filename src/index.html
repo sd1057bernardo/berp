@@ -186,6 +186,64 @@
         localStorage.removeItem('pdvOperatorCPF');
         navegar('inicio');
     }
+
+        // --- Modais globais reutilizáveis ---
+        // Inserimos três tamanhos (sm, md, lg). As páginas filhas podem usar openGlobalModal(size, title, bodyHtml, footerHtml)
+        const globalModalsHtml = `
+        <div id="global-modal-sm" class="modal fade" tabindex="-1">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title" id="global-modal-sm-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body" id="global-modal-sm-body"></div>
+                    <div class="modal-footer" id="global-modal-sm-footer"></div>
+                </div>
+            </div>
+        </div>
+        <div id="global-modal-md" class="modal fade" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title" id="global-modal-md-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body" id="global-modal-md-body"></div>
+                    <div class="modal-footer" id="global-modal-md-footer"></div>
+                </div>
+            </div>
+        </div>
+        <div id="global-modal-lg" class="modal fade" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title" id="global-modal-lg-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body" id="global-modal-lg-body"></div>
+                    <div class="modal-footer" id="global-modal-lg-footer"></div>
+                </div>
+            </div>
+        </div>`;
+
+        // anexar modais globais ao body (se ainda não existirem)
+        if(!document.getElementById('global-modal-md')){
+                const wrap = document.createElement('div'); wrap.id='global-modals-root'; wrap.innerHTML = globalModalsHtml; document.body.appendChild(wrap);
+        }
+
+        window.openGlobalModal = function(size = 'md', title = '', bodyHtml = '', footerHtml = ''){
+                const id = size === 'sm' ? 'global-modal-sm' : size === 'lg' ? 'global-modal-lg' : 'global-modal-md';
+                const titleEl = document.getElementById(id + '-title');
+                const bodyEl = document.getElementById(id + '-body');
+                const footerEl = document.getElementById(id + '-footer');
+                if(!titleEl || !bodyEl || !footerEl) return null;
+                titleEl.innerHTML = title || '';
+                bodyEl.innerHTML = bodyHtml || '';
+                footerEl.innerHTML = footerHtml || '';
+                const modalEl = document.getElementById(id);
+                const bs = new bootstrap.Modal(modalEl);
+                bs.show();
+                return modalEl;
+        };
+
+        window.closeGlobalModal = function(size = 'md'){
+                const id = size === 'sm' ? 'global-modal-sm' : size === 'lg' ? 'global-modal-lg' : 'global-modal-md';
+                const modalEl = document.getElementById(id);
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if(inst) inst.hide();
+        };
 </script>
 </body>
 </html>

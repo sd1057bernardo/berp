@@ -186,33 +186,20 @@
         // ligar eventos de cancelamento
         movList.querySelectorAll('button[data-id]').forEach(b=> b.addEventListener('click', async ()=>{
             const id = b.getAttribute('data-id');
-                            // modal para motivo
-                            const modalHtml = `
-                            <div class="modal fade" id="motivoModal" tabindex="-1">
-                                <div class="modal-dialog modal-sm modal-dialog-centered">
-                                    <div class="modal-content">
-                                        <div class="modal-header"><h5 class="modal-title">Motivo do cancelamento</h5></div>
-                                        <div class="modal-body">
-                                            <textarea id="motivo-text" class="form-control" rows="3"></textarea>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                            <button type="button" id="motivo-confirm" class="btn btn-danger">Confirmar cancelamento</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>`;
-                            const wrapper = document.createElement('div'); wrapper.innerHTML = modalHtml; document.body.appendChild(wrapper);
-                            const modalEl = document.getElementById('motivoModal');
-                            const m = new bootstrap.Modal(modalEl);
-                            m.show();
-                    document.getElementById('motivo-confirm').addEventListener('click', async ()=>{
-                                const motivo = document.getElementById('motivo-text').value.trim();
-                                if(!motivo) return;
-                                const r = await ipcRenderer.invoke('cancel-estoque-movimento', parseInt(id), motivo);
-                                if(r && r.success){ carregarLista(); showToast('Cancelado','success'); } else showToast('Erro: '+(r?.error||''),'danger');
-                                m.hide();
-                            });
+            // usar modal global (index.html) para solicitar motivo
+            const body = `<div class="mb-2"><textarea id="motivo-text" class="form-control" rows="3" placeholder="Informe o motivo do cancelamento"></textarea></div>`;
+            const footer = `<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" id="motivo-confirm" class="btn btn-danger">Confirmar cancelamento</button>`;
+            const modalEl = openGlobalModal('sm', 'Motivo do cancelamento', body, footer);
+            // ligar evento ao botão depois de aberto
+            setTimeout(()=>{
+                modalEl.querySelector('#motivo-confirm').addEventListener('click', async ()=>{
+                    const motivo = modalEl.querySelector('#motivo-text').value.trim();
+                    if(!motivo) return;
+                    const r = await ipcRenderer.invoke('cancel-estoque-movimento', parseInt(id), motivo);
+                    if(r && r.success){ carregarLista(); showToast('Cancelado','success'); } else showToast('Erro: '+(r?.error||''),'danger');
+                    closeGlobalModal('sm');
+                });
+            },50);
         }));
     }
 
