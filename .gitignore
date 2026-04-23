@@ -3,3 +3,4 @@ berp.db
 *.log
 out/
 berp.sqbpro
+berp.db.bak.*
